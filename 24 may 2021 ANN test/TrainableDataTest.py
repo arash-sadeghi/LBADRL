@@ -74,8 +74,8 @@ target=im[cords.T[0],cords.T[1]]
 target=target.reshape(target.shape[0],1)
 
 while ep<=epoch and interupt:
-    res=net.forward(T.tensor(ind).float())
-    net.backward_prop(T.tensor(target).float())
+    res=net.forward(ind)
+    net.backward_prop(res,target)
     err_v=(T.tensor(target)-res).detach().numpy()
     if not ep%100: print('[+] ep ',ep,'error ',sum(err_v**2)/len(err_v))
     ep+=1

@@ -7,6 +7,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
+from time import time,ctime
+from termcolor import colored
 # Network--------------------------------------------------------------------------------------------------------
 class Network(nn.Module):
     def __init__(self, input_dims, fc1_dims, fc2_dims,out_dim, name,learning_rate = 0.001,chkpt_dir=__file__):
@@ -21,7 +23,7 @@ class Network(nn.Module):
         self.learning_rate=learning_rate
         self.checkpoint_dir = chkpt_dir
         # self.checkpoint_file = os.path.join(self.checkpoint_dir, name+'_ddpg')
-        self.checkpoint_file = os.path.join(os.getcwd(), name+'_ddpg')
+        self.checkpoint_file = os.path.join(os.getcwd(), name+ctime(time()).replace(':','_'))
 
         ''' network for angle '''
         self.fc1a = nn.Linear(self.input_dims, self.fc1_dims)
@@ -51,6 +53,9 @@ class Network(nn.Module):
         # self.loss_func = F.mse_loss()
 
     def forward(self, input):
+        if type(input) is np.ndarray:
+            input=T.tensor(input).float()
+
         a=input
         # a=self.bn0a(a)
 
@@ -62,28 +67,37 @@ class Network(nn.Module):
         a = F.relu(a)
         a=self.mua(a)
         # a = F.relu(a)
-        # a = T.sigmoid(self.mua(a)) # to bound action output
-        self.result=a
-        return self.result
+        a = T.sigmoid(a) # to bound action output
+        return a
 
-    def backward_prop(self,target):
+    def backward_prop(self,net_output,target):
+
+        if type(target) is np.ndarray:
+            target=T.tensor(target).float()
+
         self.optimizer.zero_grad()
         # loss = self.loss_func(target, self.result) # critic_value is derived from normal net and target is the reward computed by bellman
         # self.loss_func = F.mse_loss()
 
-        loss = F.mse_loss(target, self.result) # critic_value is derived from normal net and target is the reward computed by bellman
+        loss = F.mse_loss(target, net_output) # critic_value is derived from normal net and target is the reward computed by bellman
         loss.backward()
         self.optimizer.step()
         ''' so now critic network will approach to the actual rewards+gamma*future rewards '''
 
 
     def save_checkpoint(self):
-        print('... saving checkpoint ...')
+        print(colored('[+] saving checkpoint ...'),'green')
         T.save(self.state_dict(), self.checkpoint_file)
+        print(colored('[+] saved to'+self.checkpoint_file),'green')
 
-    def load_checkpoint(self):
-        print('... loading checkpoint ...')
-        self.load_state_dict(T.load(self.checkpoint_file))
+    def load_checkpoint(self,file_name=None):
+        print(colored('[+] loading checkpoint ...'),'green')
+        if file_name is None:
+            self.load_state_dict(T.load(self.checkpoint_file))
+            print(colored('[+] loaded from'+self.checkpoint_file),'green')
+        else:
+            self.load_state_dict(T.load(os.getcwd()+'/'+file_name))
+            print(colored('[+] loaded from'+os.getcwd()+'/'+file_name),'green')
 
     def save_best(self):
         print('... saving best checkpoint ...')
