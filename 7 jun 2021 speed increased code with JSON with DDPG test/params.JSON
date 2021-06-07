@@ -1,0 +1,29 @@
+ {
+     "flags":{
+        "dynamic":"False",
+        "localMinima":"False",
+        "showFrames":"False",
+        "record":"True",
+        "globalQ":"False",
+        "communicate":"False",
+        "save_csv":"False",
+        "save_tables_videos":"False "
+     },
+     "vals":{
+        "Lx":"round(2,2)",
+        "Ly":"round(4,2)",
+        "cueRaduis":"round(0.7,2)",
+        "visibleRaduis":"round(0.3,3)",
+        "iteration":"1",
+        "samplingPeriodSmall":"10",
+        "FinalTime":"100000",
+        "HalfTime":"0",
+        "ROBN":"10",
+        "paramReductionMethod":"cyclical",
+        "PRMparameter":"500",
+        "comment":"real robot",
+        "commentDividerChar":" x ",
+        "method":"DDPG",
+        "noise":"15",
+        "seed_value":"100" 
+ }}
