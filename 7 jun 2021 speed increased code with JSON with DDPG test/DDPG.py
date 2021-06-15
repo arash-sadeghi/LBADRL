@@ -1,3 +1,5 @@
+
+#!INFO: in this code, things are processed as tensors. but outputs are sent as np arrays
 import os
 import sys
 print(sys.version_info.major, sys.version_info.minor)
@@ -99,6 +101,7 @@ class CriticNetwork(nn.Module):
 
 
     def forward(self, state, action):
+        """ 
         if type(action) is tuple:
             action=T.cat(action,1)
         elif not(type(action) is T.Tensor):
@@ -109,11 +112,26 @@ class CriticNetwork(nn.Module):
         state_value = self.fc2(state_value)
         state_value = self.bn2(state_value)
         action_value = self.action_value(action) 
-        state_action_value = F.relu(T.add(state_value, action_value))
-        # state_action_value = T.sigmoid(T.add(state_value, action_value))
+        # state_action_value = F.relu(T.add(state_value, action_value))
+        state_action_value = T.sigmoid(T.add(state_value, action_value))
         state_action_value = self.q(state_action_value)
-
         return state_action_value
+        """
+
+        # inp=np.concatenate((state,action),axis=1)
+        # inp=T.tensor(inp,dtype=T.float)
+        inp=T.cat((state,action),axis=1)
+
+        temp = self.fc1(inp)
+        temp = self.bn1(temp)
+        temp = F.relu(temp)
+        temp = self.fc2(temp)
+        temp = self.bn2(temp)
+        temp = F.relu(temp)
+        temp = self.q(temp)
+        temp = F.sigmoid(temp)
+
+        return temp
 
     def save_checkpoint(self):
         # print('... saving checkpoint ...')
@@ -174,6 +192,7 @@ class ActorNetwork(nn.Module):
         ''' done '''
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
+        print(colored('\t[!] pythorch runs on {}'.format(self.device),'green'))
 
     def forward(self, state):
         a = self.fc1a(state)
@@ -184,14 +203,7 @@ class ActorNetwork(nn.Module):
         a = F.relu(a)
         a = T.sigmoid(self.mua(a)) # to bound action output
 
-        l = self.fc1l(state)
-        l = self.bn1l(l)
-        l = F.relu(l)
-        l = self.fc2l(l)
-        l = self.bn2l(l)
-        l = F.relu(l)
-        l = T.sigmoid(self.mul(l)) # to bound action output
-        return l,a
+        return a
 
     def save_checkpoint(self):
         # print('... saving checkpoint ...')
@@ -210,18 +222,21 @@ class AGENT():
         self.alpha = alpha
         self.beta = beta
         self.path=path
+        self.critic_input_dims=input_dims+n_actions
+        self.actor_input_dims=input_dims
+
         if memory is None:
             self.memory = ReplayBuffer(max_size, input_dims, n_actions)
         else:
-            print(colored('[!]DDPG: memory given','blue'))
+            print(colored('[!]DDPG: memory given. agents have common memory.','blue'))
             self.memory=memory
         ''' self.noise = OUActionNoise(mu=np.zeros(n_actions))
         its domain lies between -1 and 1 and is not corolated with time
         '''
-        self.actor = ActorNetwork(alpha, input_dims, fc1_dims, 
+        self.actor = ActorNetwork(alpha, self.actor_input_dims, fc1_dims, 
         fc2_dims,out_dim=n_actions, name='actor '+name,chkpt_dir=self.path)
 
-        self.critic = CriticNetwork(beta, input_dims, fc1_dims, fc2_dims,
+        self.critic = CriticNetwork(beta, self.critic_input_dims, fc1_dims, fc2_dims,
         out_dim=1, name='critic '+name,chkpt_dir=self.path)
 
     def noise_std(self,noise_strenght):
@@ -240,15 +255,15 @@ class AGENT():
         l = mu[0] + T.tensor(self.noise(), dtype=T.float) # noise added to action
         a = mu[1] + T.tensor(self.noise(), dtype=T.float) # noise added to action
         '''
+        self.actor.train()#* put actor in training mode
+
         lenght = mu[0]+self.noise_std(noise_strenght)
         angle = mu[1]+self.noise_std(noise_strenght)        
         
-        lenght_np=lenght.detach().numpy()[0]
-        angle_np=angle.detach().numpy()[0]
+        lenght_np=lenght.detach().numpy()
+        angle_np=angle.detach().numpy()
 
-        self.actor.train()#* put actor in training mode
-
-        return [lenght_np*4.4*512/2,angle_np*180]
+        return [lenght_np*4.4*512/2,angle_np*180] #* converted back to numpy inorder to be used in simulator
 
 
     def learn(self):

@@ -70,13 +70,13 @@ def LOG():
     # caviat: if localMinima is true, its matrices are not globalized here
     global NASw, NAS, log, eps, alpha, reward
 
-    sup.visualize()
+    # sup.visualize()
     if sup.getTime() % samplingPeriodSmall == 0 and sup.getTime()-t > 1:
         '''logs specail for first iteration'''
         if method == 'RL' or method == 'DDPG':
             if it == 0:  # save these in the first iteration only
                 if sampled % 100 == 0:
-                    # sup.visualize() # moved for less file size >>>>>>>>>>>>>> alert
+                    sup.visualize() # moved for less file size >>>>>>>>>>>>>> alert
                     '''save csvs '''
                     if save_csv:
                         QtableRob0 = sup.getQtables()[0]

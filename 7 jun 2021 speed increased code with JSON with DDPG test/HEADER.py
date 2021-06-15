@@ -266,11 +266,13 @@ class SUPERVISOR:
         def gauss(x):
             a = 1.0 # amplititude of peak
             b = Lxpx/2.0 # center of peak
-            c = Lxpx/11# standard deviation
+            c = Lxpx/7# standard deviation
             return a*exp(-((x-b)**2)/(2*(c**2)))
         im=np.zeros((Lxpx,Lypx))
         for i in range(0,R):
-            cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,gauss(Lxpx/2-i),2)
+            # cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,gauss(Lxpx/2-i),2)
+            cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,1,2)
+        print(colored('[!] cue is completely black','red'))
 
         if self.localMinima:
             self.cueGcenter=np.flip(np.array([int((Lypx/4)),int(Lxpx/2)]))
@@ -278,6 +280,7 @@ class SUPERVISOR:
 
             for i in range(0,R):
                 cv.circle(im,(int((3*Lypx/4)),int(Lxpx/2)),i,gauss(Lxpx/2-i)/2,2)
+
 
         ''' until here dim(x)>dim(y). after here it changes '''
         im=cv.rotate(im, cv.ROTATE_90_CLOCKWISE)
