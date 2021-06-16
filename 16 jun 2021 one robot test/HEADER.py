@@ -141,8 +141,12 @@ class SUPERVISOR:
         self.Ly=m2px(Ly)
         self.cueRadius=m2px(cueRadius)
         self.visibleRaduis=m2px(visibleRaduis)
+        """ 
         self.QRloc={'QR1':(self.Lx//2,0),'QR2':(self.Lx,self.Ly//4),\
             'QR3':(self.Lx,self.Ly//4*3),'QR4':(self.Lx//2,self.Ly),'QR5':(0,3*self.Ly//4),'QR6':(0,self.Ly//4)}
+        """
+        self.QRloc={'QR1':(self.Lx//2,0)}
+
         '''self.localMinima: flag to determine if local minima will exist or not '''
         self.localMinima=localMinima
         self.ground=self.generateBackground(self.Lx,self.Ly,self.cueRadius,self.visibleRaduis)
@@ -199,10 +203,13 @@ class SUPERVISOR:
             cv.namedWindow('background')
             cv.moveWindow('background',1000,0)
         self.noise=noise
+        if method=='DDPG' and self.noise>1:
+            print(colored('[-] self.noise out of range for DDPG','red'))
+            raise NameError('[-] self.noise out of range for DDPG')
+
         # self.sigma={"angle":int(180*0.25),"length":int(self.maxlen//4*0.25)}
         noise_ratio=self.noise/180
         self.sigma={"angle":int(180*noise_ratio),"length":int(self.maxlen//4*noise_ratio*0)}
-
         self.PRMparameter=PRMparameter
         self.method=method
         self.n_actions=2
@@ -234,7 +241,7 @@ class SUPERVISOR:
         angles=np.array([35,70,70+35])
         # self.maxlen=int(16*512/9.2)*sqrt(2) # caviat
         # self.maxlen=int(1*512/2)
-        self.maxlen=int(1*512/2)
+        self.maxlen=int(np.sqrt(self.Xlen**2+self.Ylen**2)) #* max len is the diagonal of the arena
 
 
         lens=[self.maxlen//2,2*self.maxlen//2]
@@ -272,8 +279,12 @@ class SUPERVISOR:
             return a*exp(-((x-b)**2)/(2*(c**2)))
         im=np.zeros((Lxpx,Lypx))
         for i in range(0,R):
-            # cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,gauss(Lxpx/2-i),2)
+            """ 
+            cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,gauss(Lxpx/2-i),2)
             cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,1,2)
+            """        
+            cv.circle(im,(int((Lypx/2)),int(Lxpx/2)-100),i,1,2) #! costom location
+        
         print(colored('[!] cue is completely black','red'))
 
         if self.localMinima:
@@ -495,32 +506,32 @@ class SUPERVISOR:
 
             
             ''' collision with robot detection '''
-            Robot1=self.all_poses[self.allnodes[:,0]]
-            Robot2=self.all_poses[self.allnodes[:,1]]
-            dists=dist(Robot1-Robot2)
-            indexes=np.where(dists<=self.collisionDetectDist+self.velocity*self.timeStep) ##############
-            colliders=[]
-            if np.size(indexes)>0:
-                indexes=indexes[0]
-                colliders=self.allnodes[indexes]
-                '''i want collider to choose from flagsR '''
-                flags=self.flagsR[colliders[:,0],colliders[:,1]]==0
-                '''i want flags to choose form collider_filterer '''
-                colliders=colliders[flags]
-                self.avoid(colliders)
-            self.colliders=colliders
+            if self.ROBN>1:#* check robot-robot collision only if more than one robot exist
+                Robot1=self.all_poses[self.allnodes[:,0]]
+                Robot2=self.all_poses[self.allnodes[:,1]]
+                dists=dist(Robot1-Robot2)
+                indexes=np.where(dists<=self.collisionDetectDist+self.velocity*self.timeStep) ##############
+                colliders=[]
+                if np.size(indexes)>0:
+                    indexes=indexes[0]
+                    colliders=self.allnodes[indexes]
+                    '''i want collider to choose from flagsR '''
+                    flags=self.flagsR[colliders[:,0],colliders[:,1]]==0
+                    '''i want flags to choose form collider_filterer '''
+                    colliders=colliders[flags]
+                    self.avoid(colliders)
+                self.colliders=colliders
+                cond=self.flagsR==1
 
-
-            cond=self.flagsR==1
-            '''if any collision has happend dont touch their matrices'''
-            if np.size(indexes)>0: 
-                '''dont touch the recently decided ones'''
-                cond[colliders[:,0],colliders[:,1]]=False
-                '''also reverse of tuple  since matrix is symmetric'''
-                cond[colliders[:,1],colliders[:,0]]=False
-            self.counterR[cond]+=1
-            self.flagsR[self.counterR>=self.collisionDelay]=0
-            self.counterR[self.counterR>=self.collisionDelay]=0
+                '''if any collision has happend dont touch their matrices'''
+                if np.size(indexes)>0: 
+                    '''dont touch the recently decided ones'''
+                    cond[colliders[:,0],colliders[:,1]]=False
+                    '''also reverse of tuple  since matrix is symmetric'''
+                    cond[colliders[:,1],colliders[:,0]]=False
+                self.counterR[cond]+=1
+                self.flagsR[self.counterR>=self.collisionDelay]=0
+                self.counterR[self.counterR>=self.collisionDelay]=0
 
         else:
             ''' here collision avoidence is forced with a known robot name: robotNum '''
@@ -725,7 +736,7 @@ class ROBOT(SUPERVISOR):
                 if self.SUPERVISOR.method=="DDPG":
                     if self.SUPERVISOR.method=='DDPG':
                         self.Agent = AGENT(alpha=0.0001, beta=0.001,input_dims=self.SUPERVISOR.input_dims,
-                        batch_size=64, fc1_dims=400, fc2_dims=300,n_actions=self.SUPERVISOR.n_actions,
+                        batch_size=1500, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
                         path=self.SUPERVISOR.path,name=self.robotName,max_size=self.SUPERVISOR.max_size,
                         memory=self.SUPERVISOR.memory)
                 elif self.SUPERVISOR.method=="RL":
@@ -777,24 +788,28 @@ class ROBOT(SUPERVISOR):
             if self.robotName=='0' and self.SUPERVISOR.getTime()<1:
                 print(colored("\t[+] traveled distance in each cycle in px:","green"),round(dist(self.position-self.position2B)))
             '''
-            ''' check col with 2B poses'''
-            temp=np.zeros((self.SUPERVISOR.ROBN-1,2),dtype=int)
-            robotNum=int(self.robotName)
-            temp[:,0]+=robotNum
-            yaxis=np.arange(0,self.SUPERVISOR.ROBN)
-            temp[:,1]+=yaxis[yaxis!=robotNum]
-            Ys=np.array(self.SUPERVISOR.swarmPosList)[temp[:,1]]
-            Xs=np.zeros(Ys.shape)
-            Xs[:]=self.position2B
-            dists=dist(Xs-Ys)
-            indexes=np.where(dists<=self.SUPERVISOR.collisionDetectDist)
-            if np.size(indexes)>0:
-                ''' cant leave the aggregation with this angle '''
-                self.aggregate(forced=True)
-            else:
-                ''' easily leave the aggregation ''' 
-                # self.position=np.copy(self.position2B) # this one distorts the address
+            if self.SUPERVISOR.ROBN>1: #* only if the population size is bigger than 1
+                ''' check col with 2B poses'''
+                temp=np.zeros((self.SUPERVISOR.ROBN-1,2),dtype=int)
+                robotNum=int(self.robotName)
+                temp[:,0]+=robotNum
+                yaxis=np.arange(0,self.SUPERVISOR.ROBN)
+                temp[:,1]+=yaxis[yaxis!=robotNum]
+                Ys=np.array(self.SUPERVISOR.swarmPosList)[temp[:,1]]
+                Xs=np.zeros(Ys.shape)
+                Xs[:]=self.position2B
+                dists=dist(Xs-Ys)
+                indexes=np.where(dists<=self.SUPERVISOR.collisionDetectDist)
+                if np.size(indexes)>0:
+                    ''' cant leave the aggregation with this angle '''
+                    self.aggregate(forced=True)
+                else:
+                    ''' easily leave the aggregation ''' 
+                    # self.position=np.copy(self.position2B) # this one distorts the address
+                    self.position[0],self.position[1]=self.position2B[0],self.position2B[1]
+            else: #* if there is only one robot
                 self.position[0],self.position[1]=self.position2B[0],self.position2B[1]
+
 # groundSense ..................................................................................................................
     def groundSense(self):
         temp=self.ground[int(round(self.position[1])),int(round(self.position[0]))]
@@ -837,8 +852,7 @@ class ROBOT(SUPERVISOR):
             if self.SUPERVISOR.method=='DDPG': # continues space
                 """ normalizing state """                
                 state_norm=self.state/len(self.SUPERVISOR.QRloc)
-
-                self.action=self.Agent.select_action(state_norm)
+                self.action=self.Agent.select_action(state_norm,self.SUPERVISOR.noise)
                 """ denormalizing action """
                 self.action[0]*=self.maxlen
                 self.action[1]*=180
@@ -903,7 +917,9 @@ class ROBOT(SUPERVISOR):
                 action_norm[1]=self.action[1]/180
                 reward_norm=(self.reward+1)/256
                 self.Agent.remember([state_norm,action_norm,reward_norm])
-                self.Agent.learn()
+                self.Agent.learn(3000) #! training epoch
+                print(colored('\t[+] self.state {} , self.action {} , self.reward {} '\
+                    .format(self.state,self.action,self.reward),'yellow'))
 
             elif self.SUPERVISOR.method !='DDPG':
                 ''' Q-learning '''

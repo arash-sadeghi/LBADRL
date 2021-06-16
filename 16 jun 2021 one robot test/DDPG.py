@@ -72,13 +72,12 @@ class CriticNetwork(nn.Module):
         self.checkpoint_dir = chkpt_dir+'/'+name
 
         self.fc1 = nn.Linear(self.input_dims, self.fc1_dims)
-        self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
-
         self.bn1 = nn.LayerNorm(self.fc1_dims)
+        self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
         self.bn2 = nn.LayerNorm(self.fc2_dims)
-
-        self.action_value = nn.Linear(self.out_dim, self.fc2_dims)
         self.q = nn.Linear(self.fc2_dims, 1)
+
+        # self.action_value = nn.Linear(self.out_dim, self.fc2_dims)
 
         f1 = 1./np.sqrt(self.fc1.weight.data.size()[0])
         self.fc1.weight.data.uniform_(-f1, f1)
@@ -92,11 +91,15 @@ class CriticNetwork(nn.Module):
         self.q.weight.data.uniform_(-f3, f3)
         self.q.bias.data.uniform_(-f3, f3)
 
-        f4 = 1./np.sqrt(self.action_value.weight.data.size()[0])
-        self.action_value.weight.data.uniform_(-f4, f4)
-        self.action_value.bias.data.uniform_(-f4, f4)
+        # f4 = 1./np.sqrt(self.action_value.weight.data.size()[0])
+        # self.action_value.weight.data.uniform_(-f4, f4)
+        # self.action_value.bias.data.uniform_(-f4, f4)
 
+        """
+        specifying weight_decay compeletly destroys the performance
         self.optimizer = optim.Adam(self.parameters(), lr=beta,weight_decay=0.01)
+        """
+        self.optimizer = optim.Adam(self.parameters(), lr=beta)
         self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')
 
 
@@ -120,7 +123,11 @@ class CriticNetwork(nn.Module):
 
         # inp=np.concatenate((state,action),axis=1)
         # inp=T.tensor(inp,dtype=T.float)
-        inp=T.cat((state,action),axis=1)
+        if len(state)>1:
+            inp=T.cat((state,action),axis=1)
+        else:
+            inp=T.cat((T.tensor(state,dtype=T.float)\
+                ,T.tensor(action,dtype=T.float)))
 
         temp = self.fc1(inp)
         temp = self.bn1(temp)
@@ -202,6 +209,8 @@ class ActorNetwork(nn.Module):
         a = self.bn2a(a)
         a = F.relu(a)
         a = T.sigmoid(self.mua(a)) # to bound action output
+        # a = T.tanh(self.mua(a)) # to bound action output
+
 
         return a
 
@@ -257,16 +266,13 @@ class AGENT():
         '''
         self.actor.train()#* put actor in training mode
 
-        lenght = mu[0]+self.noise_std(noise_strenght)
-        angle = mu[1]+self.noise_std(noise_strenght)        
-        
-        lenght_np=lenght.detach().numpy()
-        angle_np=angle.detach().numpy()
-
-        return [lenght_np*4.4*512/2,angle_np*180] #* converted back to numpy inorder to be used in simulator
+        mu=mu.detach().numpy()
+        mu[0]=(1-noise_strenght)*mu[0]+self.noise_std(noise_strenght)
+        mu[1]=(1-noise_strenght)*mu[1]+self.noise_std(noise_strenght)        
+        return mu #* converted back to numpy inorder to be used in simulator
 
 
-    def learn(self):
+    def learn(self,epoch=1):
         if self.memory.mem_counter < self.batch_size:
             return
         states, actions, rewards= self.memory.sample_buffer(self.batch_size)
@@ -274,29 +280,43 @@ class AGENT():
         states = T.tensor(states, dtype=T.float)
         actions = T.tensor(actions, dtype=T.float)
         rewards = T.tensor(rewards, dtype=T.float)
-        ''' preparing future rewards term'''
-        critic_value = self.critic.forward(states, actions)# critic which critic network says
+        for _ in range(epoch):
+            self.critic.eval()
+            ''' preparing future rewards term'''
+            critic_value = self.critic.forward(states, actions)# critic which critic network says
 
-        '''reward= reward+gamma*future reward '''
-        target = rewards
-        target = target.view(self.batch_size, 1)
+            '''reward= reward+gamma*future reward '''
+            target = T.clone(rewards) #! torch is mutable
+            target = target.view(self.batch_size, 1)
 
-        self.critic.optimizer.zero_grad()
-        critic_loss = F.mse_loss(target, critic_value) 
-        '''critic_value is derived from normal net and target is the reward computed by bellman'''
-        critic_loss.backward()
-        self.critic.optimizer.step()
-        ''' so now critic network will approach to the actual rewards+gamma*future rewards '''
-        
-        self.actor.optimizer.zero_grad()
+            self.critic.train()
+            self.critic.optimizer.zero_grad()
+            critic_loss = F.mse_loss(target, critic_value) 
+            '''critic_value is derived from normal net and target is the reward computed by bellman'''
+            critic_loss.backward()
+            self.critic.optimizer.step()
+            ''' so now critic network will approach to the actual rewards+gamma*future rewards '''
+
+        self.critic.eval()
+
         ''' actor network is being trained indirectly. the loss for actor network 
         is the value that critic network predicts for actors output. so actor networks
         objective is reduce the punishment that critic says'''
-        actor_loss = -self.critic.forward(states, self.actor.forward(states))
-        actor_loss = T.mean(actor_loss)
+        # actor_loss = -self.critic.forward(states, self.actor.forward(states))
+        actor_loss = self.critic.forward(states, self.actor.forward(states))
+
+        self.actor.train()
+        self.actor.optimizer.zero_grad()
+
+        # actor_loss = T.mean(actor_loss)
+        actor_loss = F.mse_loss(T.ones(actor_loss.shape), actor_loss) 
+
         actor_loss.backward()
         self.actor.optimizer.step()
-    
+        self.actor.eval()
+        
+        print(colored('\t[+] actor_loss {:.4f} , critic los {:.4f}'\
+            .format(actor_loss.detach().numpy(),critic_loss.detach().numpy()),'green'))
     def remember(self, SAR):
         self.memory.store_transition(SAR[0], SAR[1], SAR[2])
 

@@ -1,3 +1,4 @@
+from termcolor import colored
 from HEADER import *
 import json
 
@@ -78,13 +79,15 @@ def LOG():
     # caviat: if localMinima is true, its matrices are not globalized here
     global NASw, NAS, log, eps, alpha, reward
 
-    # sup.visualize()
+    if continous_visaul_capture:
+        sup.visualize()
     if sup.getTime() % samplingPeriodSmall == 0 and sup.getTime()-t > 1:
         '''logs specail for first iteration'''
         if method == 'RL' or method == 'DDPG':
             if it == 0:  # save these in the first iteration only
                 if sampled % 100 == 0:
-                    sup.visualize() # moved for less file size >>>>>>>>>>>>>> alert
+                    if not continous_visaul_capture:
+                        sup.visualize() 
                     '''save csvs '''
                     if save_csv:
                         QtableRob0 = sup.getQtables()[0]
@@ -218,6 +221,9 @@ def init_params():
 # ...............................................................................................................................
 if __name__ == "__main__" or True:
     print(colored("VVVVVVVVVVVVVVVVVV STARTED VVVVVVVVVVVVVVVVVV", "yellow"))
+    continous_visaul_capture=False
+    if continous_visaul_capture:
+        print(colored('[!] sup.visualize is always running','red'))
     started_second=TIME()
     DirLocManage()
     init_params()
@@ -288,7 +294,7 @@ if __name__ == "__main__" or True:
     strip[strip % 2 == 1] = 255
     # tableImSize=(7*20,44*20)[::-1] ##### caviat: table dimentions pre known
     tableImSize = (7*20, 6*20)[::-1]  # caviat: table dimentions pre known
-
+    test=not False
     for it in range(iteration):
         iteration_duration = TIME()
         print(colored("\t[+] iteration: ", 'blue'), it)
@@ -315,7 +321,11 @@ if __name__ == "__main__" or True:
                 print(colored('[-] error in selected method. no such method', 'red'))
                 raise NameError('[-] error in selected method. no such method')
             sup.moveAll()
-
+            if test:
+                try:
+                    sup.swarm[0].Agent.critic([1],[50/sup.maxlen,90/180])
+                except:
+                    pass
             if abs(HalfTime-sup.getTime()) < 1 and GroundChanged == False:
                 GroundChanged = True
                 print(colored('\t[+] half time reached', 'green'))
@@ -332,3 +342,11 @@ if __name__ == "__main__" or True:
         print(colored("\t[+] iteration duration: ", 'blue'),int(TIME()-iteration_duration))
     print(colored('[+] duration', 'green'), int(TIME()-t1_))
     print(colored('[+] goodbye  ^^', "green"))
+"""         100,100
+        [+] actor_loss -0.0231 , critic los 0.0005
+        [+] self.state 1 , self.action [240.31029   53.596375] , self.reward -1
+
+        mem=sup.memory.sample_buffer(sup.memory.mem_counter)
+        Mem=np.concatenate((mem[0],mem[1]),axis=1)
+        MEM=np.concatenate((Mem,mem[2]),axis=1)
+"""
