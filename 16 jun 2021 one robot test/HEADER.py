@@ -917,7 +917,7 @@ class ROBOT(SUPERVISOR):
                 action_norm[1]=self.action[1]/180
                 reward_norm=(self.reward+1)/256
                 self.Agent.remember([state_norm,action_norm,reward_norm])
-                self.Agent.learn(3000) #! training epoch
+                self.Agent.learn(100) #! training epoch
                 print(colored('\t[+] self.state {} , self.action {} , self.reward {} '\
                     .format(self.state,self.action,self.reward),'yellow'))
 

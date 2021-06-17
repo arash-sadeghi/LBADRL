@@ -69,7 +69,7 @@ class CriticNetwork(nn.Module):
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
         self.out_dim = out_dim
-        self.checkpoint_dir = chkpt_dir+'/'+name
+        # self.checkpoint_dir = chkpt_dir+'/'+name
 
         self.fc1 = nn.Linear(self.input_dims, self.fc1_dims)
         self.bn1 = nn.LayerNorm(self.fc1_dims)
@@ -157,7 +157,7 @@ class ActorNetwork(nn.Module):
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
         self.out_dim = out_dim
-        self.checkpoint_dir = chkpt_dir+'/'+name
+        # self.checkpoint_dir = chkpt_dir+'/'+name
         ''' network for angle '''
         self.fc1a = nn.Linear(self.input_dims, self.fc1_dims)
         self.fc2a = nn.Linear(self.fc1_dims, self.fc2_dims)
@@ -274,14 +274,14 @@ class AGENT():
         return mu #* converted back to numpy inorder to be used in simulator
 
 
-    def learn(self,epoch=1):
-        if self.memory.mem_counter < self.batch_size:
-            return
-        states, actions, rewards= self.memory.sample_buffer(self.batch_size)
+    def learn(self,epoch,states,actions,rewards):
+        # if self.memory.mem_counter < self.batch_size:
+        #     return
+        # states, actions, rewards= self.memory.sample_buffer(self.batch_size)
 
-        states = T.tensor(states, dtype=T.float)
-        actions = T.tensor(actions, dtype=T.float)
-        rewards = T.tensor(rewards, dtype=T.float)
+        # states = T.tensor(states, dtype=T.float)
+        # actions = T.tensor(actions, dtype=T.float)
+        # rewards = T.tensor(rewards, dtype=T.float)
         for _ in range(epoch):
             self.critic.eval()
             ''' preparing future rewards term'''
@@ -289,7 +289,7 @@ class AGENT():
 
             '''reward= reward+gamma*future reward '''
             target = T.clone(rewards) #! torch is mutable
-            target = target.view(self.batch_size, 1)
+            # target = target.view(self.batch_size, 1)
 
             self.critic.train()
             self.critic.optimizer.zero_grad()
@@ -305,7 +305,7 @@ class AGENT():
         is the value that critic network predicts for actors output. so actor networks
         objective is reduce the punishment that critic says'''
         # actor_loss = -self.critic.forward(states, self.actor.forward(states))
-        actor_loss = -self.critic.forward(states, self.actor.forward(states).detach())
+        actor_loss = -self.critic.forward(states, 20*self.actor.forward(states))
 
         self.actor.train()
         self.actor.optimizer.zero_grad()

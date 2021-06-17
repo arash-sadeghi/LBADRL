@@ -2,7 +2,7 @@
      "flags":{
         "dynamic":"False",
         "localMinima":"False",
-        "showFrames":"False",
+        "showFrames":"True",
         "record":"True",
         "globalQ":"False",
         "communicate":"False",
@@ -10,20 +10,20 @@
         "save_tables_videos":"False "
      },
      "vals":{
-        "Lx":"round(2,2)",
-        "Ly":"round(2,2)",
-        "cueRaduis":"round(0.5,2)",
+        "Lx":"round(1,2)",
+        "Ly":"round(1,2)",
+        "cueRaduis":"round(0.3,2)",
         "visibleRaduis":"round(0.3,3)",
         "iteration":"1",
         "samplingPeriodSmall":"10",
-        "FinalTime":"100000",
+        "FinalTime":"1000000000",
         "HalfTime":"0",
         "ROBN":"1",
         "paramReductionMethod":"cyclical",
         "PRMparameter":"500",
         "comment":"real robot",
         "commentDividerChar":" x ",
-        "method":"LBA",
-        "noise":"15",
+        "method":"DDPG",
+        "noise":"0.7",
         "seed_value":"100" 
  }}
