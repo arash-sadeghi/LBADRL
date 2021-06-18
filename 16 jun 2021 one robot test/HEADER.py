@@ -27,6 +27,12 @@ from psutil import disk_usage
 from termcolor import colored 
 from itertools import combinations  as comb , product
 from DDPG import AGENT,ReplayBuffer
+"""
+import sys
+sys.path.append('./gradient ascent')
+from DDPG_ascend_test import AGENT,ReplayBuffer 
+""" 
+import torch as T
 ################################################################################################################################
 ################################################################################################################################
 ################################################################################################################################
@@ -283,7 +289,7 @@ class SUPERVISOR:
             cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,gauss(Lxpx/2-i),2)
             cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,1,2)
             """        
-            cv.circle(im,(int((Lypx/2)),int(Lxpx/2)-100),i,1,2) #! costom location
+            cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,1,2) #! costom location
         
         print(colored('[!] cue is completely black','red'))
 
@@ -736,7 +742,8 @@ class ROBOT(SUPERVISOR):
                 if self.SUPERVISOR.method=="DDPG":
                     if self.SUPERVISOR.method=='DDPG':
                         self.Agent = AGENT(alpha=0.0001, beta=0.001,input_dims=self.SUPERVISOR.input_dims,
-                        batch_size=1500, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
+                        # batch_size=1500, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
+                        batch_size=64, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
                         path=self.SUPERVISOR.path,name=self.robotName,max_size=self.SUPERVISOR.max_size,
                         memory=self.SUPERVISOR.memory)
                 elif self.SUPERVISOR.method=="RL":
@@ -856,6 +863,7 @@ class ROBOT(SUPERVISOR):
                 """ denormalizing action """
                 self.action[0]*=self.maxlen
                 self.action[1]*=180
+                self.action[1]+=90
             elif self.SUPERVISOR.method !='DDPG':
                 if self.SUPERVISOR.paramReductionMethod=='classic' or self.SUPERVISOR.paramReductionMethod=='cyclical':
                     eps=self.RLparams['epsilon']
@@ -917,7 +925,10 @@ class ROBOT(SUPERVISOR):
                 action_norm[1]=self.action[1]/180
                 reward_norm=(self.reward+1)/256
                 self.Agent.remember([state_norm,action_norm,reward_norm])
-                self.Agent.learn(100) #! training epoch
+                self.Agent.learn(1) #! training epoch
+                # for i in range(1000):
+                #     self.Agent.learn(100,T.ones((10,1)), T.ones((10,2))*0.5,T.ones((10,2))*0.25)
+
                 print(colored('\t[+] self.state {} , self.action {} , self.reward {} '\
                     .format(self.state,self.action,self.reward),'yellow'))
 
