@@ -302,12 +302,13 @@ if __name__ == "__main__" or True:
         tt = 0
         sampled = 0
         sup = SUPERVISOR(ROBN, codeBeginTime, showFrames, globalQ, record, Lx, Ly, cueRaduis,
-                         visibleRaduis, paramReductionMethod, PRMparameter, noise, localMinima, method)
+                         visibleRaduis, paramReductionMethod, PRMparameter, noise, localMinima, method, DDPG_log_flag_allow)
         sup.generateRobots()
         sup.moveAll()  # to make initilazation happen
         GroundChanged = False  # to make sure ground is changed only once in each iteration
         checkHealth()
         while sup.getTime() <= FinalTime:
+            checkHealth(print_flag=False)
             ''' start of main loop '''
             sup.checkCollision()
             sup.aggregateSwarm()

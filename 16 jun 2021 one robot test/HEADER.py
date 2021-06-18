@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 from psutil import disk_usage
 from termcolor import colored 
 from itertools import combinations  as comb , product
+from datetime import datetime
 from DDPG import AGENT,ReplayBuffer
 """
 import sys
@@ -53,7 +54,7 @@ def warningSupress():
     if not warnoptions:
         simplefilter("ignore")
 # ------------------------------------------------------------------------------------------------------------------------------
-def checkHealth():
+def checkHealth(print_flag=True):
     MinDiskCap=30
     # health=shutil.disk_usage('/')
     # if health[-1]/(2**30)<=5:
@@ -82,7 +83,8 @@ def checkHealth():
     if free2<MinDiskCap:
             print (colored('[-] disk is almost full',"red"))
             exit(1)
-    print(colored('\t[+] Disk health checked. free2: ','green'),str(int(free2)),' GB')
+    if print_flag:
+        print(colored('\t[+] Disk health checked. free2: ','green'),str(int(free2)),' GB')
 # ------------------------------------------------------------------------------------------------------------------------------
 def m2px(inp):
     return int(inp*512/2)
@@ -140,7 +142,7 @@ def quadratic(x):
 ################################################################################################################################
 class SUPERVISOR:
     def __init__(self,ROBN,codeBeginTime,showFrames,globalQ,record,Lx,Ly,cueRadius,visibleRaduis,\
-        paramReductionMethod,PRMparameter,noise,localMinima,method):
+        paramReductionMethod,PRMparameter,noise,localMinima,method,DDPG_log_flag_allow):
         self.path=__file__[0:__file__.rindex('/')]+'/'+codeBeginTime
         self.Etol=4
         self.Lx=m2px(Lx)
@@ -222,6 +224,8 @@ class SUPERVISOR:
         self.input_dims=1
         self.max_size=1000000
         if self.method=='DDPG':
+            self.log_flag_allow=DDPG_log_flag_allow
+            self.critic_learning_epoch=10
             self.memory=ReplayBuffer(self.max_size, self.input_dims, self.n_actions,path=self.path,name='SUPERVISOR')
 # sharedParams .................................................................................................................
     def sharedParams(self):
@@ -743,7 +747,8 @@ class ROBOT(SUPERVISOR):
                     if self.SUPERVISOR.method=='DDPG':
                         self.Agent = AGENT(alpha=0.0001, beta=0.001,input_dims=self.SUPERVISOR.input_dims,
                         # batch_size=1500, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
-                        batch_size=64, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
+                        batch_size=500, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
+                        # batch_size=64, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
                         path=self.SUPERVISOR.path,name=self.robotName,max_size=self.SUPERVISOR.max_size,
                         memory=self.SUPERVISOR.memory)
                 elif self.SUPERVISOR.method=="RL":
@@ -925,12 +930,14 @@ class ROBOT(SUPERVISOR):
                 action_norm[1]=self.action[1]/180
                 reward_norm=(self.reward+1)/256
                 self.Agent.remember([state_norm,action_norm,reward_norm])
-                self.Agent.learn(1) #! training epoch
+                log_flag=self.SUPERVISOR.log_flag_allow and datetime.now().minute%15==0 #! log DDPG info every 15 min
+                self.Agent.learn(epoch=self.SUPERVISOR.critic_learning_epoch,log=log_flag\
+                    ,log_name=self.SUPERVISOR.codeBeginTime,log_flag_allow=self.SUPERVISOR.log_flag_allow) #! training epoch
                 # for i in range(1000):
                 #     self.Agent.learn(100,T.ones((10,1)), T.ones((10,2))*0.5,T.ones((10,2))*0.25)
-
-                print(colored('\t[+] self.state {} , self.action {} , self.reward {} '\
-                    .format(self.state,self.action,self.reward),'yellow'))
+                if not self.SUPERVISOR.log_flag_allow:
+                    print(colored('\t[+] self.state {} , self.action {} , self.reward {} '\
+                        .format(self.state,self.action,self.reward),'yellow'))
 
             elif self.SUPERVISOR.method !='DDPG':
                 ''' Q-learning '''
