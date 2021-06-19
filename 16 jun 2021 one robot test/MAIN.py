@@ -30,20 +30,22 @@ def saveData(caller=None):
             try:
                 if hasattr(sup, 'video'):
                     del sup.video
+                """ not needed when NASfunction is not vecotrized. Now I used pointers
                 del sup.NASfunction
                 if localMinima:
                     del sup.NASGfunction
                     del sup.NASfunction
+                """
                 pickle.dump(sup, supSaver)
             except Exception as E:
                 print(colored('\t\t[-] error in saving class: '+str(E), 'red'))
 
         if method=='DDPG':# save ANN realted stuff
             with open(fileName+commentDividerChar+comment+'.DDPG', 'wb') as agent:
-                pickle.dump(sup.swarm[0].Agent, supSaver)
+                pickle.dump(sup.swarm[0].Agent, agent)
 
             with open(fileName+commentDividerChar+comment+'.sup_memory', 'wb') as agent:
-                pickle.dump(sup.memory, supSaver)
+                pickle.dump(sup.memory, agent)
 
     elif caller == 'interupt':
         ''' you should not delete any thing here, for code will continue after here'''

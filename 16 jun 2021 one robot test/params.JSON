@@ -2,17 +2,18 @@
      "flags":{
         "dynamic":"False",
         "localMinima":"False",
-        "showFrames":"True",
-        "record":"True",
+        "showFrames":"False",
+        "record":"False",
         "globalQ":"False",
         "communicate":"False",
         "save_csv":"False",
-        "save_tables_videos":"False "
+        "save_tables_videos":"False ",
+        "DDPG_log_flag_allow":"True"
      },
      "vals":{
         "Lx":"round(1,2)",
         "Ly":"round(1,2)",
-        "cueRaduis":"round(0.3,2)",
+        "cueRaduis":"round(0.1,2)",
         "visibleRaduis":"round(0.3,3)",
         "iteration":"1",
         "samplingPeriodSmall":"10",
@@ -21,9 +22,11 @@
         "ROBN":"1",
         "paramReductionMethod":"cyclical",
         "PRMparameter":"500",
-        "comment":"real robot",
+        "comment":"learnable net check",
         "commentDividerChar":" x ",
         "method":"DDPG",
         "noise":"0.7",
         "seed_value":"100" 
- }}
+        }}
+
+        

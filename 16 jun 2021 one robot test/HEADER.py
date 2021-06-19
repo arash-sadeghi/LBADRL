@@ -747,7 +747,7 @@ class ROBOT(SUPERVISOR):
                     if self.SUPERVISOR.method=='DDPG':
                         self.Agent = AGENT(alpha=0.0001, beta=0.001,input_dims=self.SUPERVISOR.input_dims,
                         # batch_size=1500, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
-                        batch_size=500, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
+                        batch_size=500, fc1_dims=50, fc2_dims=20,n_actions=self.SUPERVISOR.n_actions,
                         # batch_size=64, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
                         path=self.SUPERVISOR.path,name=self.robotName,max_size=self.SUPERVISOR.max_size,
                         memory=self.SUPERVISOR.memory)

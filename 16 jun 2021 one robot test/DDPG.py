@@ -139,7 +139,7 @@ class CriticNetwork(nn.Module):
         temp = self.bn2(temp)
         temp = F.relu(temp)
         temp = self.q(temp)
-        temp = F.sigmoid(temp)
+        # temp = F.sigmoid(temp) #! lets try. loss fn has its own activation fn 
 
         return temp
 
