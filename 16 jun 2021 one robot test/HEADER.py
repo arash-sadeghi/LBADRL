@@ -227,6 +227,7 @@ class SUPERVISOR:
             self.log_flag_allow=DDPG_log_flag_allow
             self.critic_learning_epoch=10
             self.memory=ReplayBuffer(self.max_size, self.input_dims, self.n_actions,path=self.path,name='SUPERVISOR')
+            self.ANN_log_rate_min=5
 # sharedParams .................................................................................................................
     def sharedParams(self):
         """
@@ -745,12 +746,15 @@ class ROBOT(SUPERVISOR):
             if self.SUPERVISOR.method=="RL" or self.SUPERVISOR.method=="DDPG":
                 if self.SUPERVISOR.method=="DDPG":
                     if self.SUPERVISOR.method=='DDPG':
-                        self.Agent = AGENT(alpha=0.0001, beta=0.001,input_dims=self.SUPERVISOR.input_dims,
+                        self.Agent = AGENT(alpha=0.0001, beta=0.000001,input_dims=self.SUPERVISOR.input_dims,
                         # batch_size=1500, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
-                        batch_size=500, fc1_dims=50, fc2_dims=20,n_actions=self.SUPERVISOR.n_actions,
+                        batch_size=500, fc1_dims=500, fc2_dims=200,n_actions=self.SUPERVISOR.n_actions,
                         # batch_size=64, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
                         path=self.SUPERVISOR.path,name=self.robotName,max_size=self.SUPERVISOR.max_size,
                         memory=self.SUPERVISOR.memory)
+                        self.prev_minute=0
+                        self.current_minute=0
+                        self.log_flag=False
                 elif self.SUPERVISOR.method=="RL":
                     ''' parameters of just RL '''
                     self.Qtable=np.zeros((self.numberOfStates,self.NumberOfActions))
@@ -930,11 +934,19 @@ class ROBOT(SUPERVISOR):
                 action_norm[1]=self.action[1]/180
                 reward_norm=(self.reward+1)/256
                 self.Agent.remember([state_norm,action_norm,reward_norm])
-                log_flag=self.SUPERVISOR.log_flag_allow and datetime.now().minute%15==0 #! log DDPG info every 15 min
-                self.Agent.learn(epoch=self.SUPERVISOR.critic_learning_epoch,log=log_flag\
-                    ,log_name=self.SUPERVISOR.codeBeginTime,log_flag_allow=self.SUPERVISOR.log_flag_allow) #! training epoch
+                self.current_minute=datetime.now().minute
+                if self.current_minute!=self.prev_minute and self.current_minute%self.SUPERVISOR.ANN_log_rate_min==0 and self.SUPERVISOR.log_flag_allow:
+                    """ to avoid multiple sampling during one minute """ 
+                    self.log_flag=True
+                    self.prev_minute=self.current_minute
+                else:
+                    self.log_flag=False
+                self.Agent.learn(epoch=self.SUPERVISOR.critic_learning_epoch,log=self.log_flag\
+                    ,log_name=self.SUPERVISOR.codeBeginTime,log_flag_allow=self.SUPERVISOR.log_flag_allow,time=self.SUPERVISOR.getTime()) #! training epoch
+                """
                 # for i in range(1000):
                 #     self.Agent.learn(100,T.ones((10,1)), T.ones((10,2))*0.5,T.ones((10,2))*0.25)
+                """
                 if not self.SUPERVISOR.log_flag_allow:
                     print(colored('\t[+] self.state {} , self.action {} , self.reward {} '\
                         .format(self.state,self.action,self.reward),'yellow'))

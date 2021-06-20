@@ -22,11 +22,10 @@
         "ROBN":"1",
         "paramReductionMethod":"cyclical",
         "PRMparameter":"500",
-        "comment":"learnable net check",
+        "comment":"moment of truth",
         "commentDividerChar":" x ",
         "method":"DDPG",
         "noise":"0.7",
         "seed_value":"100" 
         }}
 
-        

@@ -45,7 +45,10 @@ class ReplayBuffer(object): #? what is object
 
 
     def store_transition(self,state,action,reward):
-        index=self.mem_counter%self.mem_size #* the operand % makes a cyclical mem. older datas are replaced with new ones
+        index=self.mem_counter%self.mem_size #! the operand % makes a cyclical mem. older datas are replaced with new ones
+        # if self.mem_counter>=self.mem_size:
+        #     print(colored('\t[!] memsized filled','red'))
+        # index=self.mem_counter
         self.state_memory[index]=state
         self.action_memory[index]=action
         self.reward_memory[index]=reward
@@ -54,6 +57,7 @@ class ReplayBuffer(object): #? what is object
     def sample_buffer(self,batch_size):
         max_mem=min(self.mem_counter,self.mem_size) #* checking if batch is full or is still filling
         batch=np.random.choice(max_mem,batch_size) #* interesting function
+        # batch=range(0,batch_size) #! overfitting test
         states=self.state_memory[batch]
         rewards=self.reward_memory[batch]
         actions=self.action_memory[batch]
@@ -281,7 +285,7 @@ class AGENT():
         mu[1]=(1-noise_strenght)*mu[1]+self.noise_std(noise_strenght)        
         return mu #* converted back to numpy inorder to be used in simulator
 
-    def learn(self,epoch=1,log=False,log_name='log',log_flag_allow=False):
+    def learn(self,epoch=1,log=False,log_name='log',log_flag_allow=False,time=None):
         if self.memory.mem_counter < self.batch_size:
             return
         states, actions, rewards= self.memory.sample_buffer(self.batch_size)
@@ -325,8 +329,8 @@ class AGENT():
 
         if log:
             with open(log_name+'.log','a') as log_file:
-                log_file.write('actor_loss {:.7f} , critic los {:.7f} \n'\
-                .format(actor_loss.detach().numpy(),critic_loss.detach().numpy()))
+                log_file.write('time {} actor_loss {:.7f} , critic los {:.7f} \n'\
+                .format(time,actor_loss.detach().numpy(),critic_loss.detach().numpy()))
             log_size=((Path(log_name+'.log').stat().st_size/(2**10))/(2**10))/(2**10)
             if log_size>10:
                 print(colored('[-] size exceeded 10 GB, size: {}'.format(log_size),'red'))
