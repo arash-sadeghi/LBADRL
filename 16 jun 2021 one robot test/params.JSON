@@ -22,7 +22,7 @@
         "ROBN":"1",
         "paramReductionMethod":"cyclical",
         "PRMparameter":"500",
-        "comment":"moment of truth",
+        "comment":"moment of truth ",
         "commentDividerChar":" x ",
         "method":"DDPG",
         "noise":"0.7",

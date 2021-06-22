@@ -746,10 +746,9 @@ class ROBOT(SUPERVISOR):
             if self.SUPERVISOR.method=="RL" or self.SUPERVISOR.method=="DDPG":
                 if self.SUPERVISOR.method=="DDPG":
                     if self.SUPERVISOR.method=='DDPG':
-                        self.Agent = AGENT(alpha=0.0001, beta=0.000001,input_dims=self.SUPERVISOR.input_dims,
-                        # batch_size=1500, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
+                        # self.Agent = AGENT(alpha=0.0001, beta=0.000001,input_dims=self.SUPERVISOR.input_dims,
+                        self.Agent = AGENT(alpha=0.0001*0.001, beta=0.000001*0.001,input_dims=self.SUPERVISOR.input_dims,
                         batch_size=500, fc1_dims=500, fc2_dims=200,n_actions=self.SUPERVISOR.n_actions,
-                        # batch_size=64, fc1_dims=10, fc2_dims=10,n_actions=self.SUPERVISOR.n_actions,
                         path=self.SUPERVISOR.path,name=self.robotName,max_size=self.SUPERVISOR.max_size,
                         memory=self.SUPERVISOR.memory)
                         self.prev_minute=0
@@ -825,7 +824,6 @@ class ROBOT(SUPERVISOR):
                     self.position[0],self.position[1]=self.position2B[0],self.position2B[1]
             else: #* if there is only one robot
                 self.position[0],self.position[1]=self.position2B[0],self.position2B[1]
-
 # groundSense ..................................................................................................................
     def groundSense(self):
         temp=self.ground[int(round(self.position[1])),int(round(self.position[0]))]
@@ -895,7 +893,7 @@ class ROBOT(SUPERVISOR):
         if self.inAction==False:
             angle=self.action[1]
             length=self.action[0]
-            if self.state<=3: angle=180+angle # caviat
+            if self.state<=3: angle=180+angle #! caviat: this part is adapted to only side wall landmarks
 
             actionXY=np.array([length*sin(np.radians(angle)),length*cos(np.radians(angle))])
             self.sudoVec= np.array(self.QRloc[self.detectedQR])-self.position
@@ -931,7 +929,7 @@ class ROBOT(SUPERVISOR):
                 state_norm=self.state/len(self.SUPERVISOR.QRloc)
                 action_norm=[0,0]
                 action_norm[0]=self.action[0]/self.maxlen
-                action_norm[1]=self.action[1]/180
+                action_norm[1]=(self.action[1]-90)/180
                 reward_norm=(self.reward+1)/256
                 self.Agent.remember([state_norm,action_norm,reward_norm])
                 self.current_minute=datetime.now().minute
