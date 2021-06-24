@@ -294,7 +294,8 @@ class SUPERVISOR:
             cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,gauss(Lxpx/2-i),2)
             cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,1,2)
             """        
-            cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,1,2) #! costom location
+            # cv.circle(im,(int((Lypx/2)),int(Lxpx/2)),i,1,2)
+            cv.circle(im,(int(3*Lypx/4),int(3*Lxpx/4)),i,1,2) #! costom location
         
         print(colored('[!] cue is completely black','red'))
 
